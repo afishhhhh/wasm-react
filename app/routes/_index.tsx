@@ -1,4 +1,6 @@
 import type { MetaFunction } from "@remix-run/cloudflare";
+import { useEffect, useState } from "react";
+import initSwc, { transformSync } from "@swc/wasm-web";
 
 export const meta: MetaFunction = () => {
   return [
@@ -8,131 +10,356 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    async function importAndRunSwcOnMount() {
+      await initSwc();
+      setInitialized(true);
+    }
+    importAndRunSwcOnMount();
+  }, []);
+
+  function compile() {
+    if (!initialized) {
+      return;
+    }
+    const result = transformSync(
+      `import React, { useState, useRef, useEffect } from 'react';
+import { 
+  FileText, Search, GitBranch, Settings, Terminal, Bug, Palette, 
+  Layout, Sidebar, Maximize, Minimize, Code, List, Map, 
+  ChevronDown, ChevronRight, X, Plus, Split, Type, 
+  Circle, Square, Triangle, Zap, Cpu, Box
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const VSCodeClone = () => {
+  const [sidebarPosition, setSidebarPosition] = useState('left');
+  const [secondarySidebarVisible, setSecondarySidebarVisible] = useState(false);
+  const [panelPosition, setPanelPosition] = useState('bottom');
+  const [panelAlignment, setPanelAlignment] = useState('center');
+  const [panelMaximized, setPanelMaximized] = useState(false);
+  const [layoutMode, setLayoutMode] = useState('default');
+  const [activeEditor, setActiveEditor] = useState('welcome');
+  const [editors, setEditors] = useState([
+    { id: 'welcome', title: 'Welcome', content: 'Welcome to VSCode Clone', group: 0 },
+    { id: 'readme', title: 'README.md', content: '# Project Documentation', group: 0 }
+  ]);
+  const [editorGroups, setEditorGroups] = useState([0]);
+  const [showMinimap, setShowMinimap] = useState(true);
+  const [showBreadcrumbs, setShowBreadcrumbs] = useState(true);
+  const [theme, setTheme] = useState('dark');
+  const [activeSidebarTab, setActiveSidebarTab] = useState('explorer');
+  const [activePanelTab, setActivePanelTab] = useState('problems');
+
+  const toggleSidebarPosition = () => {
+    setSidebarPosition(prev => prev === 'left' ? 'right' : 'left');
+  };
+
+  const toggleSecondarySidebar = () => {
+    setSecondarySidebarVisible(prev => !prev);
+  };
+
+  const togglePanelPosition = () => {
+    const positions = ['bottom', 'left', 'right'];
+    const currentIndex = positions.indexOf(panelPosition);
+    setPanelPosition(positions[(currentIndex + 1) % positions.length]);
+  };
+
+  const togglePanelAlignment = () => {
+    const alignments = ['center', 'left', 'right', 'justify'];
+    const currentIndex = alignments.indexOf(panelAlignment);
+    setPanelAlignment(alignments[(currentIndex + 1) % alignments.length]);
+  };
+
+  const togglePanelMaximized = () => {
+    setPanelMaximized(prev => !prev);
+  };
+
+  const toggleLayoutMode = () => {
+    const modes = ['default', 'zen', 'centered'];
+    const currentIndex = modes.indexOf(layoutMode);
+    setLayoutMode(modes[(currentIndex + 1) % modes.length]);
+  };
+
+  const openFile = (fileId) => {
+    setActiveEditor(fileId);
+  };
+
+  const splitEditor = (direction) => {
+    const newGroup = Math.max(...editorGroups) + 1;
+    setEditorGroups([...editorGroups, newGroup]);
+    setActiveEditor(editors[0].id);
+  };
+
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="flex flex-col items-center gap-16">
-        <header className="flex flex-col items-center gap-9">
-          <h1 className="leading text-2xl font-bold text-gray-800 dark:text-gray-100">
-            Welcome to <span className="sr-only">Remix</span>
-          </h1>
-          <div className="h-[144px] w-[434px]">
-            <img
-              src="/logo-light.png"
-              alt="Remix"
-              className="block w-full dark:hidden"
-            />
-            <img
-              src="/logo-dark.png"
-              alt="Remix"
-              className="hidden w-full dark:block"
-            />
+    <div className={\`flex flex-col h-screen \${theme === 'dark' ? 'bg-gray-900 text-gray-200' : 'bg-white text-gray-800'}\`}>
+      {/* Title Bar */}
+      <div className={\`flex items-center justify-between px-4 py-2 \${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} border-b \${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}\`}>
+        <div className="flex items-center">
+          <span className="font-semibold">VSCode Clone</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button onClick={toggleLayoutMode} className="p-1 rounded hover:bg-gray-700">
+            <Layout size={16} />
+          </button>
+          <button onClick={toggleSidebarPosition} className="p-1 rounded hover:bg-gray-700">
+            <Sidebar size={16} />
+          </button>
+          <button onClick={togglePanelMaximized} className="p-1 rounded hover:bg-gray-700">
+            {panelMaximized ? <Minimize size={16} /> : <Maximize size={16} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Primary Sidebar */}
+        <div className={\`\${sidebarPosition === 'left' ? 'order-first' : 'order-last'} \${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} w-12 flex flex-col items-center py-4 border-r \${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}\`}>
+          <button 
+            onClick={() => setActiveSidebarTab('explorer')} 
+            className={\`p-2 mb-4 rounded \${activeSidebarTab === 'explorer' ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : ''}\`}
+          >
+            <FileText size={20} />
+          </button>
+          <button 
+            onClick={() => setActiveSidebarTab('search')} 
+            className={\`p-2 mb-4 rounded \${activeSidebarTab === 'search' ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : ''}\`}
+          >
+            <Search size={20} />
+          </button>
+          <button 
+            onClick={() => setActiveSidebarTab('git')} 
+            className={\`p-2 mb-4 rounded \${activeSidebarTab === 'git' ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : ''}\`}
+          >
+            <GitBranch size={20} />
+          </button>
+          <button 
+            onClick={() => setActiveSidebarTab('debug')} 
+            className={\`p-2 mb-4 rounded \${activeSidebarTab === 'debug' ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : ''}\`}
+          >
+            <Bug size={20} />
+          </button>
+          <button 
+            onClick={() => setActiveSidebarTab('extensions')} 
+            className={\`p-2 mb-4 rounded \${activeSidebarTab === 'extensions' ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : ''}\`}
+          >
+            <Box size={20} />
+          </button>
+          <div className="mt-auto">
+            <button 
+              onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')} 
+              className="p-2 rounded hover:bg-gray-700"
+            >
+              <Palette size={20} />
+            </button>
+            <button 
+              onClick={() => setActiveSidebarTab('settings')} 
+              className={\`p-2 mt-4 rounded \${activeSidebarTab === 'settings' ? (theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200') : ''}\`}
+            >
+              <Settings size={20} />
+            </button>
           </div>
-        </header>
-        <nav className="flex flex-col items-center justify-center gap-4 rounded-3xl border border-gray-200 p-6 dark:border-gray-700">
-          <p className="leading-6 text-gray-700 dark:text-gray-200">
-            What&apos;s next?
-          </p>
-          <ul>
-            {resources.map(({ href, text, icon }) => (
-              <li key={href}>
-                <a
-                  className="group flex items-center gap-3 self-stretch p-3 leading-normal text-blue-700 hover:underline dark:text-blue-500"
-                  href={href}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {icon}
-                  {text}
-                </a>
-              </li>
+        </div>
+
+        {/* Secondary Sidebar */}
+        <AnimatePresence>
+          {secondarySidebarVisible && (
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: 200 }}
+              exit={{ width: 0 }}
+              className={\`\${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} border-r \${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'} overflow-hidden\`}
+            >
+              <div className="p-4">
+                <h3 className="font-semibold mb-2">Outline</h3>
+                <div className="space-y-1">
+                  <div className="flex items-center">
+                    <ChevronDown size={16} className="mr-1" />
+                    <span>Main Function</span>
+                  </div>
+                  <div className="flex items-center ml-4">
+                    <ChevronRight size={16} className="mr-1" />
+                    <span>Variables</span>
+                  </div>
+                  <div className="flex items-center ml-4">
+                    <ChevronRight size={16} className="mr-1" />
+                    <span>Functions</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Editor Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Editor Tabs */}
+          <div className={\`flex items-center \${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} border-b \${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}\`}>
+            {editors.filter(editor => editor.group === editorGroups[0]).map(editor => (
+              <button
+                key={editor.id}
+                onClick={() => openFile(editor.id)}
+                className={\`px-4 py-2 text-sm flex items-center \${activeEditor === editor.id ? (theme === 'dark' ? 'bg-gray-900' : 'bg-white') : ''}\`}
+              >
+                <FileText size={16} className="mr-2" />
+                {editor.title}
+                <button className="ml-2 p-1 rounded-full hover:bg-gray-700">
+                  <X size={12} />
+                </button>
+              </button>
             ))}
-          </ul>
-        </nav>
+            <button className="p-2 ml-auto" onClick={() => splitEditor('right')}>
+              <Split size={16} />
+            </button>
+          </div>
+
+          {/* Editor Content */}
+          <div className="flex-1 flex overflow-hidden">
+            {editorGroups.map(group => (
+              <div key={group} className="flex-1 flex flex-col overflow-hidden border-r last:border-r-0">
+                <div className="flex-1 overflow-auto p-4">
+                  {editors.find(editor => editor.id === activeEditor && editor.group === group)?.content}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Status Bar */}
+          <div className={\`flex items-center justify-between px-4 py-1 text-xs \${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} border-t \${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}\`}>
+            <div className="flex items-center space-x-4">
+              <span>main*</span>
+              <span>UTF-8</span>
+              <span>LF</span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span>Ln 1, Col 1</span>
+              <span>Spaces: 2</span>
+              <span>TypeScript</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Panel */}
+      <div 
+        className={\`\${panelMaximized ? 'h-2/3' : 'h-48'} \${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} border-t \${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'} flex flex-col\`}
+        style={{
+          order: panelPosition === 'bottom' ? 1 : 0,
+          width: panelPosition !== 'bottom' ? '300px' : 'auto'
+        }}
+      >
+        <div className={\`flex items-center \${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'} px-4 py-1\`}>
+          <button 
+            onClick={() => setActivePanelTab('problems')} 
+            className={\`px-3 py-1 text-sm \${activePanelTab === 'problems' ? (theme === 'dark' ? 'bg-gray-800' : 'bg-white') : ''}\`}
+          >
+            Problems
+          </button>
+          <button 
+            onClick={() => setActivePanelTab('terminal')} 
+            className={\`px-3 py-1 text-sm \${activePanelTab === 'terminal' ? (theme === 'dark' ? 'bg-gray-800' : 'bg-white') : ''}\`}
+          >
+            Terminal
+          </button>
+          <button 
+            onClick={() => setActivePanelTab('output')} 
+            className={\`px-3 py-1 text-sm \${activePanelTab === 'output' ? (theme === 'dark' ? 'bg-gray-800' : 'bg-white') : ''}\`}
+          >
+            Output
+          </button>
+          <button 
+            onClick={togglePanelPosition} 
+            className="ml-auto p-1 rounded hover:bg-gray-700"
+          >
+            <Sidebar size={16} />
+          </button>
+          <button 
+            onClick={togglePanelAlignment} 
+            className="p-1 rounded hover:bg-gray-700"
+          >
+            <Layout size={16} />
+          </button>
+          <button 
+            onClick={togglePanelMaximized} 
+            className="p-1 rounded hover:bg-gray-700"
+          >
+            {panelMaximized ? <Minimize size={16} /> : <Maximize size={16} />}
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-4">
+          {activePanelTab === 'problems' && (
+            <div>
+              <div className="flex items-center mb-2">
+                <span className="font-semibold">Problems (3)</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <span className="text-red-500 mr-2">Error</span>
+                  <span>Missing semicolon (1:12)</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-yellow-500 mr-2">Warning</span>
+                  <span>Unused variable 'count' (3:5)</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-yellow-500 mr-2">Warning</span>
+                  <span>Function is too long (15:1)</span>
+                </div>
+              </div>
+            </div>
+          )}
+          {activePanelTab === 'terminal' && (
+            <div className="font-mono text-sm">
+              <div className="mb-2">$ npm start</div>
+              <div className="text-green-500">&gt; project@1.0.0 start</div>
+              <div className="text-blue-500">&gt; react-scripts start</div>
+              <div className="mt-2">Starting the development server...</div>
+            </div>
+          )}
+          {activePanelTab === 'output' && (
+            <div className="font-mono text-sm">
+              <div>[Info] Loading extensions...</div>
+              <div>[Info] 5 extensions loaded</div>
+              <div>[Info] Initializing workspace...</div>
+              <div>[Info] Workspace ready</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className={\`px-4 py-2 text-xs text-center \${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'} border-t \${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}\`}>
+        <div>
+          created by <a href="https://space.coze.cn" className="text-blue-500 hover:underline">coze space</a>
+        </div>
+        <div>页面内容均由 AI 生成，仅供参考</div>
       </div>
     </div>
   );
-}
+};
 
-const resources = [
-  {
-    href: "https://remix.run/start/quickstart",
-    text: "Quick Start (5 min)",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="20"
-        viewBox="0 0 20 20"
-        fill="none"
-        className="stroke-gray-600 group-hover:stroke-current dark:stroke-gray-300"
-      >
-        <path
-          d="M8.51851 12.0741L7.92592 18L15.6296 9.7037L11.4815 7.33333L12.0741 2L4.37036 10.2963L8.51851 12.0741Z"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: "https://remix.run/start/tutorial",
-    text: "Tutorial (30 min)",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="20"
-        viewBox="0 0 20 20"
-        fill="none"
-        className="stroke-gray-600 group-hover:stroke-current dark:stroke-gray-300"
-      >
-        <path
-          d="M4.561 12.749L3.15503 14.1549M3.00811 8.99944H1.01978M3.15503 3.84489L4.561 5.2508M8.3107 1.70923L8.3107 3.69749M13.4655 3.84489L12.0595 5.2508M18.1868 17.0974L16.635 18.6491C16.4636 18.8205 16.1858 18.8205 16.0144 18.6491L13.568 16.2028C13.383 16.0178 13.0784 16.0347 12.915 16.239L11.2697 18.2956C11.047 18.5739 10.6029 18.4847 10.505 18.142L7.85215 8.85711C7.75756 8.52603 8.06365 8.21994 8.39472 8.31453L17.6796 10.9673C18.0223 11.0653 18.1115 11.5094 17.8332 11.7321L15.7766 13.3773C15.5723 13.5408 15.5554 13.8454 15.7404 14.0304L18.1868 16.4767C18.3582 16.6481 18.3582 16.926 18.1868 17.0974Z"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: "https://remix.run/docs",
-    text: "Remix Docs",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="20"
-        viewBox="0 0 20 20"
-        fill="none"
-        className="stroke-gray-600 group-hover:stroke-current dark:stroke-gray-300"
-      >
-        <path
-          d="M9.99981 10.0751V9.99992M17.4688 17.4688C15.889 19.0485 11.2645 16.9853 7.13958 12.8604C3.01467 8.73546 0.951405 4.11091 2.53116 2.53116C4.11091 0.951405 8.73546 3.01467 12.8604 7.13958C16.9853 11.2645 19.0485 15.889 17.4688 17.4688ZM2.53132 17.4688C0.951566 15.8891 3.01483 11.2645 7.13974 7.13963C11.2647 3.01471 15.8892 0.951453 17.469 2.53121C19.0487 4.11096 16.9854 8.73551 12.8605 12.8604C8.73562 16.9853 4.11107 19.0486 2.53132 17.4688Z"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: "https://rmx.as/discord",
-    text: "Join Discord",
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="20"
-        viewBox="0 0 24 20"
-        fill="none"
-        className="stroke-gray-600 group-hover:stroke-current dark:stroke-gray-300"
-      >
-        <path
-          d="M15.0686 1.25995L14.5477 1.17423L14.2913 1.63578C14.1754 1.84439 14.0545 2.08275 13.9422 2.31963C12.6461 2.16488 11.3406 2.16505 10.0445 2.32014C9.92822 2.08178 9.80478 1.84975 9.67412 1.62413L9.41449 1.17584L8.90333 1.25995C7.33547 1.51794 5.80717 1.99419 4.37748 2.66939L4.19 2.75793L4.07461 2.93019C1.23864 7.16437 0.46302 11.3053 0.838165 15.3924L0.868838 15.7266L1.13844 15.9264C2.81818 17.1714 4.68053 18.1233 6.68582 18.719L7.18892 18.8684L7.50166 18.4469C7.96179 17.8268 8.36504 17.1824 8.709 16.4944L8.71099 16.4904C10.8645 17.0471 13.128 17.0485 15.2821 16.4947C15.6261 17.1826 16.0293 17.8269 16.4892 18.4469L16.805 18.8725L17.3116 18.717C19.3056 18.105 21.1876 17.1751 22.8559 15.9238L23.1224 15.724L23.1528 15.3923C23.5873 10.6524 22.3579 6.53306 19.8947 2.90714L19.7759 2.73227L19.5833 2.64518C18.1437 1.99439 16.6386 1.51826 15.0686 1.25995ZM16.6074 10.7755L16.6074 10.7756C16.5934 11.6409 16.0212 12.1444 15.4783 12.1444C14.9297 12.1444 14.3493 11.6173 14.3493 10.7877C14.3493 9.94885 14.9378 9.41192 15.4783 9.41192C16.0471 9.41192 16.6209 9.93851 16.6074 10.7755ZM8.49373 12.1444C7.94513 12.1444 7.36471 11.6173 7.36471 10.7877C7.36471 9.94885 7.95323 9.41192 8.49373 9.41192C9.06038 9.41192 9.63892 9.93712 9.6417 10.7815C9.62517 11.6239 9.05462 12.1444 8.49373 12.1444Z"
-          strokeWidth="1.5"
-        />
-      </svg>
-    ),
-  },
-];
+export default VSCodeClone;`,
+      {
+        jsc: {
+          target: "es2022",
+          parser: {
+            syntax: "typescript",
+            tsx: !0,
+          },
+        },
+        module: {
+          type: "commonjs",
+        },
+      }
+    );
+    console.log(result);
+  }
+
+  return (
+    <div className="App">
+      <button onClick={compile}>Compile</button>
+    </div>
+  );
+}

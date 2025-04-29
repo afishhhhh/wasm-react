@@ -13,6 +13,19 @@ declare module "@remix-run/cloudflare" {
 }
 
 export default defineConfig({
+  server: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp",
+    },
+    middlewareMode: false,
+    fs: {
+      strict: true,
+    },
+  },
+  optimizeDeps: {
+    exclude: ["@swc/wasm-web"],
+  },
   plugins: [
     cloudflareDevProxyVitePlugin({
       getLoadContext,
