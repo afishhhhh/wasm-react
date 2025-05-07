@@ -1,6 +1,11 @@
-import type { MetaFunction } from "@remix-run/cloudflare";
+import {
+  json,
+  type LoaderFunctionArgs,
+  type MetaFunction,
+} from "@remix-run/cloudflare";
 import { useEffect, useState } from "react";
 import initSwc, { transformSync } from "@swc/wasm-web";
+import { useLoaderData } from "@remix-run/react";
 
 export const meta: MetaFunction = () => {
   return [
@@ -9,23 +14,8 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export default function Index() {
-  const [initialized, setInitialized] = useState(false);
-
-  useEffect(() => {
-    async function importAndRunSwcOnMount() {
-      await initSwc();
-      setInitialized(true);
-    }
-    importAndRunSwcOnMount();
-  }, []);
-
-  function compile() {
-    if (!initialized) {
-      return;
-    }
-    const result = transformSync(
-      `import React, { useState, useRef, useEffect } from 'react';
+export async function loader({ request }: LoaderFunctionArgs) {
+  const sourceCode = `import React, { useState, useRef, useEffect } from 'react';
 import { 
   FileText, Search, GitBranch, Settings, Terminal, Bug, Palette, 
   Layout, Sidebar, Maximize, Minimize, Code, List, Map, 
@@ -340,20 +330,42 @@ const VSCodeClone = () => {
   );
 };
 
-export default VSCodeClone;`,
-      {
-        jsc: {
-          target: "es2022",
-          parser: {
-            syntax: "typescript",
-            tsx: !0,
-          },
+export default VSCodeClone;`;
+
+  return json({
+    sourceCode,
+  });
+}
+
+export default function Index() {
+  const { sourceCode } = useLoaderData<typeof loader>();
+
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    async function importAndRunSwcOnMount() {
+      await initSwc();
+      setInitialized(true);
+    }
+    importAndRunSwcOnMount();
+  }, []);
+
+  function compile() {
+    if (!initialized) {
+      return;
+    }
+    const result = transformSync(sourceCode, {
+      jsc: {
+        target: "es2022",
+        parser: {
+          syntax: "ecmascript",
+          jsx: true,
         },
-        module: {
-          type: "commonjs",
-        },
-      }
-    );
+      },
+      module: {
+        type: "es6",
+      },
+    });
     console.log(result);
   }
 
