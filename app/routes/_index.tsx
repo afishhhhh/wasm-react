@@ -1,11 +1,7 @@
-import {
-  json,
-  type LoaderFunctionArgs,
-  type MetaFunction,
-} from "@remix-run/cloudflare";
-import { useEffect, useState } from "react";
+import { type MetaFunction } from "@remix-run/cloudflare";
+import { useEffect, useRef, useState } from "react";
 import initSwc, { transformSync } from "@swc/wasm-web";
-import { useFetcher, useLoaderData } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
 
 export const meta: MetaFunction = () => {
   return [
@@ -15,43 +11,63 @@ export const meta: MetaFunction = () => {
 };
 
 export default function Index() {
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<{ code: string }>();
 
-  const [initialized, setInitialized] = useState(false);
+  const compiledRef = useRef(false);
 
-  // useEffect(() => {
-  //   async function importAndRunSwcOnMount() {
-  //     await initSwc();
-  //     setInitialized(true);
-  //   }
-  //   importAndRunSwcOnMount();
-  // }, []);
+  const [_, updater] = useState(0);
+
+  useEffect(() => {
+    async function importAndRunSwcOnMount() {
+      await initSwc();
+      fetcher.load("/api/compile");
+    }
+    importAndRunSwcOnMount();
+  }, []);
+
+  useEffect(() => {
+    if (compiledRef.current || fetcher.state !== "idle" || !fetcher.data) {
+      return;
+    }
+    const code = fetcher.data.code;
+    const result = transformSync(code, {
+      jsc: {
+        target: "es2022",
+        parser: {
+          syntax: "ecmascript",
+          jsx: true,
+        },
+      },
+      module: {
+        type: "commonjs",
+      },
+    });
+    compiledRef.current = true;
+    console.log(result);
+  }, [fetcher.state, fetcher.data]);
 
   function compile() {
-    fetcher.load("/api/compile");
+    updater((prev) => prev + 1);
     // if (!initialized) {
     //   return;
     // }
-    // const result = transformSync(sourceCode, {
-    //   jsc: {
-    //     target: "es2022",
-    //     parser: {
-    //       syntax: "ecmascript",
-    //       jsx: true,
-    //     },
-    //   },
-    //   module: {
-    //     type: "es6",
-    //   },
-    // });
-    // console.log(result);
   }
-
-  console.log("fetcher: ", fetcher.state, fetcher.data);
 
   return (
     <div className="App">
       <button onClick={compile}>Compile</button>
+      <script
+        type="importmap"
+        dangerouslySetInnerHTML={{
+          __html: `{
+            "imports": {
+              "react": "https://esm.sh/react@19.1.0",
+              "react-dom/": "https://esm.sh/react-dom@19.1.0/"
+            }
+          }`,
+        }}
+      />
+      <script src="https://esm.sh/react?raw"></script>
     </div>
   );
 }

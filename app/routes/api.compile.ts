@@ -1,7 +1,8 @@
 import { json, LoaderFunctionArgs } from "@remix-run/cloudflare";
+import { Module, parse } from "@swc/core";
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const sourceCode = `import React, { useState, useRef, useEffect } from 'react';
+  const code = `import React, { useState, useRef, useEffect } from 'react';
   import { 
     FileText, Search, GitBranch, Settings, Terminal, Bug, Palette, 
     Layout, Sidebar, Maximize, Minimize, Code, List, Map, 
@@ -318,7 +319,54 @@ export async function loader({ request }: LoaderFunctionArgs) {
   
   export default VSCodeClone;`;
 
+  const deps = await extractDependencies(code);
+
   return json({
-    sourceCode,
+    code,
+    deps,
   });
+}
+
+async function extractDependencies(code: string) {
+  const ast = await parse(code, {
+    syntax: "ecmascript",
+    jsx: true,
+    target: "es2022",
+  });
+
+  const dependencies = new Set<string>();
+
+  if (ast.type === "Module") {
+    traverseModule(ast, dependencies);
+  }
+
+  return Array.from(dependencies);
+}
+
+function traverseModule(module: Module, dependencies: Set<string>) {
+  for (const item of module.body) {
+    if (item.type === "ImportDeclaration") {
+      const source = item.source.value;
+      console.log("source: ", source);
+
+      if (!source.startsWith(".") && !source.startsWith("/")) {
+        dependencies.add(source);
+      }
+    }
+    // 检查动态导入
+    // else if (
+    //   item.type === "ExpressionStatement" &&
+    //   item.expression.type === "CallExpression" &&
+    //   item.expression.callee.type === "Import"
+    // ) {
+    //   const args = item.expression.arguments;
+    //   console.log("args: ", args);
+    //   if (args.length > 0 && args[0].type === "StringLiteral") {
+    //     const source = args[0].value;
+    //     if (!source.startsWith(".") && !source.startsWith("/")) {
+    //       dependencies.add(source);
+    //     }
+    //   }
+    // }
+  }
 }
