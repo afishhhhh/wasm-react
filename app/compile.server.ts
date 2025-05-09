@@ -1,7 +1,6 @@
-import { json, LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { Module, parse } from "@swc/core";
+import { Module, parse, transformSync } from "@swc/core";
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function compile() {
   const code = `import React, { useState, useRef, useEffect } from 'react';
   import { 
     FileText, Search, GitBranch, Settings, Terminal, Bug, Palette, 
@@ -10,8 +9,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     Circle, Square, Triangle, Zap, Cpu, Box
   } from 'lucide-react';
   import { motion, AnimatePresence } from 'framer-motion';
-  
-  const VSCodeClone = () => {
+  export default function VSCodeClone() {  
     const [sidebarPosition, setSidebarPosition] = useState('left');
     const [secondarySidebarVisible, setSecondarySidebarVisible] = useState(false);
     const [panelPosition, setPanelPosition] = useState('bottom');
@@ -317,14 +315,66 @@ export async function loader({ request }: LoaderFunctionArgs) {
     );
   };
   
-  export default VSCodeClone;`;
+  `;
 
-  const deps = await extractDependencies(code);
+  const [deps, defaultExport] = await Promise.all([
+    extractDependencies(code),
+    extractDefaultExport(code),
+  ]);
 
-  return json({
-    code,
-    deps,
+  const compiledCode = compileSync(code);
+
+  return {
+    code: compiledCode,
+    deps: deps.filter((dep) => dep !== "react" && dep !== "react-dom"),
+    defaultExport,
+  };
+}
+
+function compileSync(code: string) {
+  const result = transformSync(code, {
+    jsc: {
+      target: "es2022",
+      parser: {
+        syntax: "ecmascript",
+        jsx: true,
+      },
+    },
+    module: {
+      type: "commonjs",
+    },
   });
+
+  return result.code;
+}
+
+async function extractDefaultExport(code: string) {
+  const ast = await parse(code, {
+    syntax: "ecmascript",
+    jsx: true,
+    target: "es2022",
+  });
+
+  if (ast.type === "Module") {
+    return findDefaultExport(ast);
+  }
+}
+
+function findDefaultExport(module: Module) {
+  for (const item of module.body) {
+    if (item.type === "ExportDefaultExpression") {
+      if (item.expression.type === "Identifier") {
+        return item.expression.value;
+      }
+    }
+    if (item.type === "ExportDefaultDeclaration") {
+      if (item.decl.type === "FunctionExpression") {
+        if (item.decl.identifier?.type === "Identifier") {
+          return item.decl.identifier.value;
+        }
+      }
+    }
+  }
 }
 
 async function extractDependencies(code: string) {

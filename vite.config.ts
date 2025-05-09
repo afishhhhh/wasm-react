@@ -24,7 +24,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ["@swc/wasm-web"],
+    exclude: ["@swc/core"],
   },
   plugins: [
     cloudflareDevProxyVitePlugin({
